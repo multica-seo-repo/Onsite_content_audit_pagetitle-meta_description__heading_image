@@ -93,7 +93,7 @@ def run(args):
         raise ValueError('Target list must contain absolute HTTP(S) URLs')
     if content.get('description_chars', 155) != 155 or content.get('title_px', 580) != 580 or content.get('image_kib', 200) != 200:
         raise ValueError('This version uses fixed thresholds: title 580px, description 155 characters, image 200KiB')
-    language = output.get('language', 'zh')
+    language = 'en'  # Excel narratives are English; preserve the source config.
     data = audit(exports, targets=[u.strip() for u in targets], language=language)
     addresses = data['manifest'].pop('page_addresses')
     observed = {urlsplit(address).hostname.lower() for address in addresses if urlsplit(address).hostname}

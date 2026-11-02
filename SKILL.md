@@ -40,3 +40,28 @@ Produce four Excel reports for **17.1–20.2 only**: `17.1-17.4 {site name}_page
 - No live website repair, publishing, GSC submission, new paid API calls or automatic installation is part of invoking this skill. Ordinary missing evidence yields a deliverable with Human Check; a local parse failure of Page Titles:All prevents a false empty-crawl report. Preserve errors and findings on an export failure, do not rerun the crawl.
 
 For a Multica agent's optional instructions use [agent instructions](references/multica-agent-instructions.md); they point to these same rules. Repository background, installation and import packaging are in [README.md](README.md).
+
+## Excel output language
+
+Write all generated Excel report narratives, analyses, findings, recommendations,
+report titles, worksheet names, table headers, chart labels and notes in English,
+regardless of the input or conversation language.
+
+Preserve original source evidence exactly, including Chinese keywords, page
+titles, descriptions, headings, quoted page content, URLs and paths. Chinese
+text in source-evidence fields is permitted. Do not translate, remove or rewrite
+evidence merely to make a workbook appear English-only. Use English for the
+generated explanations surrounding that evidence.
+
+Set report-generation language to English. If a reused configuration specifies
+Chinese, use an English run-specific setting without modifying the original
+input configuration. Prepare narrative fields in English before rendering.
+
+Before delivery, reopen every Excel workbook and inspect generated narrative
+and presentation fields for Chinese text; correct those fields and regenerate
+when needed. Inspect source-evidence fields separately and preserve their text.
+Do not apply a blanket Chinese-character removal or replacement to a workbook.
+Preserve audit logic, thresholds, result codes, evidence provenance and
+machine-readable field keys. This rule governs Excel deliverables and the
+narrative inputs used to build them; it does not require English chat replies
+or translation of internal documentation.

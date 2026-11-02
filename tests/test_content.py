@@ -52,6 +52,35 @@ class ContentTests(unittest.TestCase):
     def check(self, data, item):
         return next(c for c in data['checks'] if c['id'] == item)
 
+    def test_english_report_preserves_chinese_source_evidence(self):
+        import re
+        from openpyxl import load_workbook
+        import report
+        self.full_exports()
+        self.write_duplicates([
+            ['https://example.com/中文', '原始中文标题', 'Indexable', ''],
+            ['https://example.com/second', '原始中文标题', 'Indexable', ''],
+        ])
+        data = self.audit()
+        self.assertEqual(data['language'], 'en')
+        for check in data['checks']:
+            self.assertIsNone(re.search(r'[\u3400-\u9fff]', check['finding']))
+            self.assertIsNone(re.search(r'[\u3400-\u9fff]', check['action']))
+        self.assertIn('原始中文标题', str(self.check(data, '17.2')['rows']))
+        data.update(site_name='Example', site_url='https://example.com/', audit_date='2026-11-02')
+        paths = report.build_report(data, self.path / 'english-report')
+        values = []
+        for path in paths:
+            wb = load_workbook(path)
+            for row in wb['Checklist'].iter_rows():
+                for cell in row:
+                    self.assertIsNone(re.search(r'[\u3400-\u9fff]', str(cell.value or '')))
+            for ws in wb:
+                values.extend(str(cell.value or '') for row in ws for cell in row)
+            wb.close()
+        self.assertIn('原始中文标题', values)
+        self.assertIn('https://example.com/中文', values)
+
     def test_native_empty_exports_pass_and_scope_is_twelve(self):
         self.full_exports()
         data = self.audit()
@@ -95,7 +124,7 @@ class ContentTests(unittest.TestCase):
             self.assertIn('Duplicate', check['finding'])
             self.assertIn('Indexable', check['finding'])
             self.assertIn('Canonicalised', check['finding'])
-            self.assertIn('中英文', check['finding'])
+            self.assertIn('Chinese/English', check['finding'])
             self.assertEqual(len(review['excluded_rows']), 2)
         data.update(site_name='Example', site_url='https://example.com/', audit_date='2026-10-15')
         import report
@@ -121,7 +150,7 @@ class ContentTests(unittest.TestCase):
             self.assertEqual(check['result'], '√')
             self.assertEqual(check['rows'], [])
             self.assertEqual(check['duplicate_review']['discarded_indexable_rows'], 1)
-            self.assertIn('排除', check['finding'])
+            self.assertIn('excluded', check['finding'])
 
     def test_unknown_indexability_is_not_a_clean_duplicate_review(self):
         self.full_exports()

@@ -140,7 +140,7 @@ def duplicate_finding(review, source, language, has_gaps):
     return note
 
 
-def audit(exports_dir, targets=None, title_px=580, description_chars=155, image_kib=200, language='zh'):
+def audit(exports_dir, targets=None, title_px=580, description_chars=155, image_kib=200, language='en'):
     directory = Path(exports_dir)
     if not directory.is_dir():
         raise ValueError(f'Export directory does not exist: {directory}')
