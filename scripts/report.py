@@ -5,6 +5,8 @@ import datetime
 import re
 import math
 import unicodedata
+import json
+from image_evidence import SCHEMA, MARKER, settings, package_check, digest, verify_manifest
 
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -84,7 +86,7 @@ def text(value):
     return result
 
 
-def build_report(data, output_dir):
+def build_report(data, output_dir, delivery=None, provenance=None):
     validate(data)
     name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '_', data['site_name']).strip(' .')
     if not name or len(name.encode('utf-8')) > 180:
@@ -98,31 +100,71 @@ def build_report(data, output_dir):
     for path in paths:
         if path.exists():
             raise FileExistsError(f'Report already exists: {path}; choose a new run directory')
-    staged = []
-    for prefix, _, sheet in GROUPS:
-        checks = sorted((c for c in data['checks'] if c['id'].split('.')[0] == prefix),
-                        key=lambda c: tuple(map(int, c['id'].split('.'))))
-        expected = {'Checklist': [CHECK_HEADERS] +
-                    [[c['id'], c['item_name'], c['result'], c['finding'], c['action']] for c in checks]}
+    options = settings(delivery)
+    created = []
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    evidence = {'schema': SCHEMA, 'run_id': data.get('run_id') or str(Path(output_dir).resolve()),
+                'site_name': data['site_name'], 'site_url': data['site_url'], 'audit_date': data['audit_date'],
+                'settings': options, 'sources': provenance or {}, 'checks': {}}
+    manifest_path = paths[-1].with_suffix('.evidence.json')
+    if manifest_path.exists():
+        raise FileExistsError(manifest_path)
+    def expected_for(checks, compact):
+        expected = {'Checklist': [CHECK_HEADERS]}
         for c in checks:
+            finding = c['finding']
+            if c['id'] in compact:
+                info = evidence['checks'][c['id']]
+                finding += (f"\n{MARKER} Manifest: {manifest_path.name}; preview only: "
+                            f"{info['displayed_rows']} of {info['reference_rows']} reference rows; "
+                            f"{info['unique_assets']} unique assets; {info['affected_pages']} affected pages. "
+                            "Complete evidence is in the manifest-listed ZIP files.")
+                info['checklist'] = [c['id'], c['item_name'], c['result'], finding, c['action']]
+            expected['Checklist'].append([c['id'], c['item_name'], c['result'], finding, c['action']])
             if c['result'] == 'X':
                 detail_sheet, columns = DETAILS[c['id']]
                 rows = [[label for label, _ in columns]]
-                for index, row in enumerate(c['rows']):
+                selected = c['rows'][:options['preview_rows']] if c['id'] in compact else c['rows']
+                for index, row in enumerate(selected):
                     values = dict(zip(c['headers'], row))
                     if c['id'] == '18.3':
                         values['Pixel Width'] = c.get('pixel_widths', [None] * len(c['rows']))[index]
                     rows.append([values.get(source, '') for _, source in columns])
                 expected[detail_sheet] = rows
-        staged.append((render_workbook(expected), expected))
-    created = []
+        return expected
+    def compact_check(c, reason):
+        info = package_check(c, output_dir, paths[-1].stem, options, created)
+        info.update(preview=c['rows'][:options['preview_rows']],
+                    displayed_rows=min(len(c['rows']),options['preview_rows']), reason=reason,
+                    original_finding=c['finding'])
+        evidence['checks'][c['id']] = info
     try:
-        Path(output_dir).mkdir(parents=True, exist_ok=True)
-        for path, (contents, expected) in zip(paths, staged):
+        for path, (prefix, _, _) in zip(paths, GROUPS):
+            checks = sorted((c for c in data['checks'] if c['id'].split('.')[0] == prefix),
+                            key=lambda c: tuple(map(int, c['id'].split('.'))))
+            compact = set()
+            if prefix == '20':
+                for c in checks:
+                    if c['result']=='X' and len(c['rows'])>options['row_limit']:
+                        compact_check(c,'row_limit'); compact.add(c['id'])
+            expected = expected_for(checks, compact)
+            contents = render_workbook(expected)
+            if prefix == '20' and len(contents)>options['target_bytes']:
+                for c in checks:
+                    if c['result']=='X' and c['id'] not in compact:
+                        compact_check(c,'workbook_size'); compact.add(c['id'])
+                expected = expected_for(checks, compact)
+                contents = render_workbook(expected)
+                if len(contents)>options['target_bytes']:
+                    raise ValueError('Compact image workbook still exceeds delivery target')
             with path.open('xb') as f:
-                created.append(path)
-                f.write(contents)
+                created.append(path); f.write(contents)
             verify_workbook(path, expected)
+        if evidence['checks']:
+            evidence['workbook'] = {'file': paths[-1].name, 'sha256': digest(paths[-1])}
+            with manifest_path.open('x',encoding='utf-8') as f:
+                created.append(manifest_path); json.dump(evidence,f,ensure_ascii=False,indent=2)
+            verify_manifest(manifest_path, paths[-1])
         return paths
     except Exception:
         for path in created:

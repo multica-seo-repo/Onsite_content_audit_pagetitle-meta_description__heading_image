@@ -129,13 +129,19 @@ def run(args):
     manifest = data.pop('manifest')
     # This flow has no MCP/live calls; it does not reset shared usage.json budgets.
     manifest['local_operations'] = {'mcp_calls': 0, 'live_requests': 0, 'paid_api_calls': 0}
+    data['run_id'] = config.get('run_id') or str(run_dir)
     with (destination / 'findings.json').open('x', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     with (destination / 'manifest.json').open('x', encoding='utf-8') as f:
         json.dump(manifest, f, ensure_ascii=False, indent=2)
-    reports = build_report(data, destination)
+    reports = build_report(data, destination, output.get('image_delivery'), manifest)
+    evidence_manifest = reports[-1].with_suffix('.evidence.json')
+    evidence_files = []
+    if evidence_manifest.exists():
+        evidence = json.loads(evidence_manifest.read_text(encoding='utf-8'))
+        evidence_files = [str(evidence_manifest)] + [str(destination / p['file']) for c in evidence['checks'].values() for p in c['parts']]
     with (destination / 'run-status.json').open('x', encoding='utf-8') as f:
-        json.dump({'state': 'complete', 'reports': [str(p) for p in reports], 'items': 12}, f, indent=2)
+        json.dump({'state': 'complete', 'reports': [str(p) for p in reports], 'items': 12, 'image_evidence': evidence_files}, f, indent=2)
     print('ITEM  ROWS  RESULT')
     for c in data['checks']:
         print(f"{c['id']:<5} {c['row_count']:>5}  {c['result']}")

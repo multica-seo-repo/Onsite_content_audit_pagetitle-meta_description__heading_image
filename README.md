@@ -187,3 +187,7 @@ CI 在 Windows/Linux/macOS、Python 3.10/3.12 上运行离线测试、环境设�
 提取设计来自 [FirstPage 原始 skill](https://github.com/firstpage-seo/onsite-checking-AI-workflows/tree/main/.claude/skills/onsite-canonical-meta-images-extraction-multica) 和仓库所有者提供的 Multica 修改版。保留成熟判断，拆除其他审核/整表 Review，并按所有者确认将 18.3 改成字符数。当前实现没有复制客户数据或上游 Excel 模板；[版本记录](CHANGELOG.md)说明有意变化。
 
 离线测试和合成 CSV→XLSX 可以验证数据处理，跨平台 CI 可验证对应 runner 上的 Python 环境；它们不证明你的 MacBook 已安装环境、真实 Multica 导入、SF session 导出或动态图片抓取完整。正式使用时按 session 交接记录确认实际范围。
+
+## Large image delivery
+
+See [image evidence contract](references/image-evidence.md). Compact previews retain complete verified evidence in independently readable ZIP attachments.

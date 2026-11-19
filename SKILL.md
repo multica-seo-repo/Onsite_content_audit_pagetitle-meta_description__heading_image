@@ -1,6 +1,6 @@
 ---
 name: onsite-audit-content
-description: Use when auditing onsite checklist items 17.1–20.2 for page titles, meta descriptions, H1 headings and images using an existing Screaming Frog session, saved crawl or CSV exports, including reuse alongside the other onsite audit skills.
+description: Use when auditing onsite checklist items 17.1–20.2 for page titles, meta descriptions, H1 headings and images using an existing Screaming Frog session, saved crawl or CSV exports, including reuse alongside the other onsite audit skills. Requires a selected run directory and native exports/config; writes four XLSX reports there, with verified JSONL ZIP evidence for large image details.
 ---
 
 # Onsite Content Audit
@@ -65,3 +65,23 @@ Preserve audit logic, thresholds, result codes, evidence provenance and
 machine-readable field keys. This rule governs Excel deliverables and the
 narrative inputs used to build them; it does not require English chat replies
 or translation of internal documentation.
+
+## Large image evidence and complete delivery
+
+Apply this workflow to checks 20.1 and 20.2 within an authorized audit or consolidation.
+
+Default to full image detail in Excel. Switch an image check to compact presentation when its detail exceeds 50,000 rows or its workbook exceeds the configured delivery target. Use 8 MiB as the initial packaging target, not as a claimed platform upload limit. Record the effective settings and switching reason.
+
+In compact presentation, retain the existing detail-sheet names and columns. Show the first 1,000 original rows in deterministic source order, clearly identified in Checklist Findings as a preview. Preserve the original result, findings, instructions and limitations. Report total reference rows, unique assets, affected pages and displayed rows separately. A preview is not complete evidence and must never determine the audit result.
+
+Preserve every original image detail row, its order and duplicate occurrences in versioned UTF-8 JSONL evidence files. Package them as independently readable ZIP files within the delivery target; do not create raw byte fragments requiring manual concatenation. Include a manifest with check IDs, run/site identity, source hashes, filenames, row ranges, row counts and SHA-256 checksums. Preserve available alt/context evidence without inventing missing fields.
+
+The consolidator accepts compact image reports only with their explicitly selected matching evidence manifest and files. Validate identity, hashes, row coverage, counts and preview correspondence before importing results. Reject missing, conflicting or corrupted evidence. Never interpret preview row counts as total issue counts or silently omit section 20 because of file size.
+
+Keep Checklist-to-detail navigation internal. Put evidence filenames and preview limitations in Findings and record exact evidence references in the validation sidecar. Preserve existing template structure and navigation validation.
+
+Produce and verify the master, matching validation files and required evidence packages in the assigned task directory. Attach the complete selected delivery together and verify downloaded bytes. Use bounded retries for failures; do not infer an upload-size limit from HTTP 500 alone. Report delivery as pending if required files remain inaccessible. Follow current authorization and holds for archival.
+
+Existing explicit exclusions remain effective. Skill invocation alone does not authorize consolidation, reopening historical work or changing an audit conclusion.
+
+Read [image evidence contract](references/image-evidence.md) for configuration, selection and delivery.
